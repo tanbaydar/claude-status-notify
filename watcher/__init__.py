@@ -1,0 +1,1 @@
+"""Claude service status watcher."""
