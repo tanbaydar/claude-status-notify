@@ -1,8 +1,8 @@
 {
-  "checked_at": "2026-07-29T20:42:56.860884+00:00",
+  "checked_at": "2026-07-29T21:40:12.481411+00:00",
   "components": {
-    "Claude Code": "major_outage",
-    "claude.ai": "major_outage"
+    "Claude Code": "partial_outage",
+    "claude.ai": "partial_outage"
   },
   "keyword_incidents": {
     "Claude Design": []
