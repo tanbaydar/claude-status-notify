@@ -1,7 +1,7 @@
 {
-  "checked_at": "2026-08-14T22:32:46.395440+00:00",
+  "checked_at": "2026-08-14T22:55:34.299099+00:00",
   "components": {
-    "Claude Code": "partial_outage",
+    "Claude Code": "operational",
     "claude.ai": "operational"
   },
   "keyword_incidents": {
