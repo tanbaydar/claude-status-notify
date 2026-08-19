@@ -77,7 +77,7 @@ snapshot so the next run can establish a clean baseline:
 }
 ```
 
-## What is going on technically
+## How it works
 
 There are only three moving parts: Anthropic's public status API, a Python
 script running in GitHub Actions, and ntfy.
