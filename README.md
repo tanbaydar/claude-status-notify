@@ -1,112 +1,148 @@
-# Claude Status Notify
+# Claude Status Notifier
 
-A small, dependency-free watcher that checks Anthropic's public status page and
-sends [ntfy](https://ntfy.sh/) notifications when Claude services go down or
-recover.
+## Purpose
 
-It monitors:
+claude.ai can be fine while Claude Code is having trouble, and Claude
+Design only ever shows up inside incident text. What I want to know is
+which one broke and when it comes back.
 
-- `claude.ai`
-- `Claude Code`
-- Claude Design mentions in active incidents
+During my summer internship, the three I cared about were:
 
-The watcher runs automatically with GitHub Actions. It does not require a local
-computer or a dedicated server.
+- claude.ai
+- Claude Code
+- Claude Design
 
-## Subscribe to the alerts
+Anthropic's status page has a Subscribe button, but it covers every
+component, and Claude Design isn't a component at all. I wanted a notifier
+that watches exactly those three, so I wrote one. If you care about
+different services, it's two lists in [`watcher/config.py`](watcher/config.py).
 
-Anyone can receive this watcher's Claude status notifications:
+It sends a push through [ntfy](https://ntfy.sh/) when one of them degrades
+or goes down, and another when it recovers. If nothing changes, it says
+nothing.
 
-1. Install the [ntfy app](https://ntfy.sh/).
+It runs in GitHub Actions, so there's no server, no database, and no
+computer that has to stay on.
+
+## How to use it
+
+### If you just want my alerts
+
+You do not need to run any code.
+
+1. Install the [ntfy app](https://ntfy.sh/) on your phone.
 2. Add a subscription using the `https://ntfy.sh` server.
 3. Subscribe to the topic `claude-status-noti-tanbaydar`.
 
-Notifications can also be viewed in a browser at
-[ntfy.sh/claude-status-noti-tanbaydar](https://ntfy.sh/claude-status-noti-tanbaydar).
+That is it. You can also [open the notification feed in a
+browser](https://ntfy.sh/claude-status-noti-tanbaydar).
 
-## How it works
+### If you want your own watcher
 
-GitHub Actions runs the watcher about every five minutes. Each run:
+Forking the project gives you your own topic and your own list of services.
+Setup takes a few minutes:
 
-1. Fetches Anthropic's current status.
-2. Compares it with the previous snapshot in `state.json`.
-3. Sends one ntfy alert when a service becomes degraded or unavailable.
-4. Sends one recovery message when the service becomes operational again.
-5. Saves the new snapshot for the next run.
+1. **Fork this repository.**
+2. **Choose an ntfy topic.** Make it long and difficult to guess, then subscribe
+   to it in the ntfy app.
+3. **Give the topic to the workflow.** In your fork, go to **Settings → Secrets
+   and variables → Actions** and create a repository secret named `NTFY_TOPIC`.
+4. **Allow snapshot updates.** Go to **Settings → Actions → General** and select
+   **Read and write permissions** under Workflow permissions.
+5. **Start it.** Open **Actions → Watch Claude status**, enable workflows if
+   GitHub asks, and choose **Run workflow**.
 
-Unchanged conditions do not produce repeated notifications. The first run only
-initializes the snapshot and is intentionally silent.
+The first run is intentionally quiet. It records what “normal right now” looks
+like; later runs notify you only when that picture changes. You can confirm it
+worked by checking that the Actions run is green and `state.json` has a recent
+`checked_at` timestamp.
 
-## Setup
+> **A note about ntfy topics:** on the public ntfy server, the topic name is
+> effectively the address and the password. Anyone who guesses it may be able
+> to subscribe or publish, so use something random rather than a familiar name.
 
-### 1. Subscribe in ntfy
+Want to watch something different? Edit `WATCH_COMPONENTS` and
+`KEYWORD_SERVICES` in [`watcher/config.py`](watcher/config.py). Then empty the
+snapshot so the next run can establish a clean baseline:
 
-Install the ntfy mobile app and subscribe to the topic you want to use on the
-`https://ntfy.sh` server.
+```json
+{
+  "checked_at": null,
+  "components": {},
+  "keyword_incidents": {}
+}
+```
 
-Treat the topic name as private: anyone who knows a public ntfy topic may be able
-to subscribe or publish to it.
+## What is going on technically
 
-### 2. Add the GitHub secret
+There are only three moving parts: Anthropic's public status API, a Python
+script running in GitHub Actions, and ntfy.
 
-In this repository, open:
+```mermaid
+flowchart LR
+    A[Anthropic status API] -->|summary JSON| W[Python watcher]
+    S[(state.json)] -->|previous snapshot| W
+    W -->|only when state changes| N[ntfy]
+    N -->|push notification| P[Your phone]
+    W -->|new snapshot| S
 
-**Settings → Secrets and variables → Actions → New repository secret**
+    subgraph G[GitHub Actions · every 5 minutes]
+        W
+        S
+    end
+```
 
-Create the following secret:
+The workflow in [`.github/workflows/watch.yml`](.github/workflows/watch.yml)
+runs `python3 -m watcher.check` every five minutes. The watcher fetches
+Anthropic's public status summary and handles the three services in two ways:
 
-| Name | Value |
-| --- | --- |
-| `NTFY_TOPIC` | Your ntfy topic name |
+- **claude.ai and Claude Code** are regular status-page components, so their
+  statuses can be read directly.
+- **Claude Design** is not a component. The watcher infers its condition by
+  looking for “Claude Design” or “design” in unresolved incident titles and
+  updates.
 
-The topic stays in GitHub's encrypted secrets and should not be committed to the
-repository.
+The important part is that this is a *transition* watcher, not an outage
+repeater. `state.json` holds the last successful observation, and each run
+compares the new observation with it.
 
-### 3. Allow state updates
+```mermaid
+flowchart TD
+    A[Fetch current status] --> B{Previous state exists?}
+    B -->|No| C[Save baseline silently]
+    B -->|Yes| D{What changed?}
+    D -->|Nothing| E[Stay quiet]
+    D -->|Degraded or down| F[Send alert]
+    D -->|Recovered| G[Send recovery]
+    E --> H[Save current state]
+    F --> H
+    G --> H
+```
 
-Open:
+Suppose Claude Code changes from `operational` to `major_outage`. The watcher
+sends one high-priority alert and records the outage. Five minutes later, if
+nothing has changed, it stays quiet. When the status returns to `operational`,
+it sends one recovery message.
 
-**Settings → Actions → General → Workflow permissions**
+Delivery happens before the snapshot is updated. This order matters: if the
+ntfy request fails, the workflow leaves `state.json` untouched. The next run
+sees the transition again and retries the notification instead of silently
+losing it.
 
-Select **Read and write permissions**, then save the setting. The workflow needs
-this permission to commit the updated `state.json`.
+After a successful check, GitHub Actions commits the new `state.json` back to
+the repository. That committed file is the entire persistence layer. It makes
+the system easy to inspect, easy to fork, and free to run—at the cost of a small
+automated commit history.
 
-### 4. Start the watcher
+One defensive detail is worth calling out: if Anthropic renames or removes a
+configured component, the watcher records it as `unknown`. Treating missing
+data as healthy would create a false recovery alert, which is much worse than
+making the uncertainty visible.
 
-Open:
-
-**Actions → Watch Claude status → Run workflow**
-
-The initial run records the current status without notifying. Subsequent checks
-run automatically on the schedule in `.github/workflows/watch.yml`.
-
-GitHub Actions schedules may occasionally be delayed during periods of high
-load.
-
-## Notification behavior
-
-- Degraded or unavailable services produce a batched high-priority alert.
-- Recoveries produce a batched normal-priority message.
-- Missing component data is treated as non-operational.
-- State is saved only after notifications succeed, so failed deliveries can be
-  retried on the next run.
-
-## Configuration
-
-The workflow only requires `NTFY_TOPIC`. These optional environment variables
-are available for alternate deployments and testing:
-
-| Variable | Default | Purpose |
-| --- | --- | --- |
-| `NTFY_SERVER` | `https://ntfy.sh` | Use a self-hosted ntfy server |
-| `STATE_PATH` | `state.json` | Change the state file location |
-| `CLAUDE_STATUS_URL` | Anthropic summary API | Use an alternate status endpoint |
-| `HTTP_TIMEOUT_SECONDS` | `20` | Set the HTTP timeout |
-
-## Tests
+There are no third-party Python dependencies. If you want to read the project,
+start with [`watcher/check.py`](watcher/check.py); the tests capture the main
+behavior:
 
 ```sh
 python3 -m unittest discover -s tests -v
 ```
-
-No third-party Python packages are required.
