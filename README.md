@@ -2,9 +2,10 @@
 
 ## Purpose
 
-claude.ai can be fine while Claude Code is having trouble, and Claude
-Design only ever shows up inside incident text. What I want to know is
-which one broke and when it comes back.
+Claude outages are often partial: one service can be degraded while the others
+keep working. I wanted to know when any of the Claude services I use is
+affected, and when it is working normally again, without repeatedly checking
+the status page.
 
 During my summer internship, the three I cared about were:
 
