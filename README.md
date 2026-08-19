@@ -1,5 +1,8 @@
 # Claude Status Notifier
 
+A small GitHub Actions watcher that sends you an ntfy notification when the
+Claude services you care about degrade, go down, or recover.
+
 ## Purpose
 
 Claude outages are often partial: one service can be degraded while the others
