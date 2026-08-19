@@ -109,13 +109,16 @@ repeater. `state.json` holds the last successful observation, and each run
 compares the new observation with it.
 
 ```mermaid
-stateDiagram-v2
-    [*] --> Baseline: first run
-    Baseline --> Healthy: record current status silently
-    Healthy --> Healthy: no change · no notification
-    Healthy --> Unhealthy: degradation detected · send alert
-    Unhealthy --> Unhealthy: still affected · stay quiet
-    Unhealthy --> Healthy: recovery detected · send recovery
+flowchart TD
+    A[Fetch current status] --> B{Previous state exists?}
+    B -->|No| C[Save baseline silently]
+    B -->|Yes| D{What changed?}
+    D -->|Nothing| E[Stay quiet]
+    D -->|Degraded or down| F[Send alert]
+    D -->|Recovered| G[Send recovery]
+    E --> H[Save current state]
+    F --> H
+    G --> H
 ```
 
 Suppose Claude Code changes from `operational` to `major_outage`. The watcher
