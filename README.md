@@ -2,29 +2,27 @@
 
 ## Purpose
 
-Claude services sometimes degrade independently. claude.ai can be fine while
-Claude Code is having trouble, and Claude Design may only be mentioned inside
-an incident update. The useful information is which one is affected, and when
-it comes back.
+claude.ai can be fine while Claude Code is having trouble, and Claude
+Design only ever shows up inside incident text. What I want to know is
+which one broke and when it comes back.
 
-During my summer internship, these were the three I cared about:
+During my summer internship, the three I cared about were:
 
-- **claude.ai**
-- **Claude Code**
-- **Claude Design**
+- claude.ai
+- Claude Code
+- Claude Design
 
-Anthropic's status page has subscriptions, but they include every component,
-and Claude Design is not a component you can subscribe to. I wanted a notifier
-specific to the services I use, so I programmed this. I'm sharing it so other
-people can use it too. If you care about different services, the setup below
-explains how to tailor it to your own needs.
+Anthropic's status page has a Subscribe button, but it covers every
+component, and Claude Design isn't a component at all. I wanted a notifier
+that watches exactly those three, so I wrote one. If you care about
+different services, it's two lists in [`watcher/config.py`](watcher/config.py).
 
-It sends a push notification when one of those services degrades or goes down,
-then another when it recovers. If nothing changes, it says nothing. This means
-I do not have to keep checking the status page to see whether a service is back.
+It sends a push through [ntfy](https://ntfy.sh/) when one of them degrades
+or goes down, and another when it recovers. If nothing changes, it says
+nothing.
 
-It runs in GitHub Actions and delivers through [ntfy](https://ntfy.sh/). There
-is no server or database, and no computer needs to remain on.
+It runs in GitHub Actions, so there's no server, no database, and no
+computer that has to stay on.
 
 ## How to use it
 
