@@ -1,8 +1,8 @@
 {
-  "checked_at": "2026-08-31T20:03:17.845928+00:00",
+  "checked_at": "2026-08-31T23:47:24.690708+00:00",
   "components": {
-    "Claude Code": "degraded_performance",
-    "claude.ai": "degraded_performance"
+    "Claude Code": "operational",
+    "claude.ai": "operational"
   },
   "keyword_incidents": {
     "Claude Design": []
