@@ -1,4 +1,14 @@
+# Python bytecode / caches
 __pycache__/
 *.py[cod]
+*.egg-info/
+build/
+dist/
+.pytest_cache/
+.venv/
+
+# Secrets
 .env
+
+# OS noise
 .DS_Store

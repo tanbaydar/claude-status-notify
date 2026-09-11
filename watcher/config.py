@@ -2,6 +2,19 @@
 
 import os
 
+
+def _env_float(name: str, default: float) -> float:
+    """Read a float env var, falling back to ``default`` on bad input."""
+    raw = os.getenv(name)
+    if raw is None:
+        return default
+    try:
+        parsed = float(raw)
+    except (TypeError, ValueError):
+        return default
+    return parsed if parsed > 0 else default
+
+
 STATUS_URL = os.getenv(
     "CLAUDE_STATUS_URL",
     "https://status.anthropic.com/api/v2/summary.json",
@@ -19,4 +32,7 @@ KEYWORD_SERVICES = {
 NTFY_SERVER = os.getenv("NTFY_SERVER", "https://ntfy.sh").rstrip("/")
 NTFY_TOPIC = os.getenv("NTFY_TOPIC", "").strip()
 STATE_PATH = os.getenv("STATE_PATH", "state.json")
-HTTP_TIMEOUT_SECONDS = float(os.getenv("HTTP_TIMEOUT_SECONDS", "20"))
+
+# A non-numeric or non-positive timeout must not crash the whole watcher: fall
+# back to a sane default so a typo in an env file can't disable monitoring.
+HTTP_TIMEOUT_SECONDS = _env_float("HTTP_TIMEOUT_SECONDS", 20)
