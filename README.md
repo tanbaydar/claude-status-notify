@@ -77,6 +77,29 @@ snapshot so the next run can establish a clean baseline:
 }
 ```
 
+## Command-line interface
+
+The watcher installs a `claude-status-notify` command when packaged (or you can
+run `python3 -m watcher.check` directly). It supports two useful modes beyond
+the default monitor loop:
+
+```sh
+# Preview what a transition would send, without touching ntfy or state.
+claude-status-notify --dry-run
+
+# Read the current status of the watched services and exit.
+claude-status-notify --status
+claude-status-notify --status --json   # machine-readable output
+
+claude-status-notify --state /path/to/state.json   # override the state file
+claude-status-notify --version
+```
+
+With no arguments it behaves exactly like the workflow: fetch the status,
+compare with the saved snapshot, notify on transitions, and write the new
+snapshot. `--dry-run` is handy when you've changed `WATCH_COMPONENTS` and want
+to confirm what a real run will ship before pointing a live topic at it.
+
 ## How it works
 
 There are only three moving parts: Anthropic's public status API, a Python
@@ -148,5 +171,6 @@ start with [`watcher/check.py`](watcher/check.py); the tests capture the main
 behavior:
 
 ```sh
-python3 -m unittest discover -s tests -v
+python3 -m unittest discover -s tests -v     # stdlib runner
+python3 -m pytest                          # pytest runner (dev extra)
 ```
